@@ -1,26 +1,41 @@
 # `Mark:down`
 
-***[中文](./README-zh.md)***
+***[English](./README.md)***  
 
 ![Logo](./Assets/Logo.png)
 
 ## Overview
 
-`Mark:down` is a Markdown template engine. As a strict superset of Markdown that compiles to Markdown, it provides the following features for Markdown authoring:
+`Mark:down` is a powerful Markdown template engine. As a strict superset of Markdown that compiles to Markdown, it provides the following features for Markdown authoring:
 
 - Syntactic sugar: such as `#:4` (level 4 heading), `#:!`/`#:image` (image line), `#:row` and `#:column` (tables), etc.
 - Preprocessing: such as `#:include` for file imports, `#:define` for macro definitions, etc.
 - Control flow: including `#:if`, `#:else`, `#:while`, `#:for`, etc.
-- Embedded code: embeds [neolua](https://github.com/neolithos/neolua), greatly expanding possibilities. Includes `#:code` for executing code blocks, `{{}}` for inline output in text, etc.
-- Template system: implements structure reuse through `#:template`
+- Embedded code: embedded [neolua](https://github.com/neolithos/neolua) for greatly extended possibilities. Including `#:code` for executing code blocks, `{{}}` for inline output in text, etc.
+- Template system: reusing identical structures through `#:template`
 
-`Mark:down`'s signature syntax consists of "line directives" starting with `#:` and `{{}}` for inline output.
+`Mark:down`'s signature syntax consists of "line directives" beginning with `#:` and inline output with `{{}}`.
 
 `Mark:down` is developed using `C# AOT` and provides a `Visual Studio Code` extension.
 
 > `Mark:down` is open source on [GitHub](https://github.com/Water-Run/MarkColonDown), where you can read the [complete documentation](https://github.com/Water-Run/MarkColonDown/tree/main/Documents/CompiledDoucuments)
 
-## Quick Start
+## Quick Overview
+
+A typical `Mark:down` project directory should look like:
+
+```plaintext
+│  Compile.md # Compilation entry point, the compiler will first enter this file and load corresponding compilation directives
+│  Log.md # Log
+│  Global.md # Stores global variables, templates, etc., automatically imported into every compiled file under default configuration
+│
+├─Compiled # Compiled results are stored in this directory
+└─Source # "Source code"
+```
+
+![Compilation Flow Diagram](./Assets/CompileFlow.png)
+
+## Compiler
 
 `mcd` is the compiler provided by `Mark:down`.
 
@@ -30,7 +45,7 @@ After installation, use:
 mcd init
 ```
 
-to initialize. This will generate `__mcd__.md` (the entry file) and its corresponding log `__mcd__.log` in the directory.
+to initialize. This will generate `Compile.md` and the corresponding log `Log.md` in the directory.
 
 Use:
 
@@ -38,51 +53,77 @@ Use:
 mcd compile
 ```
 
-to compile.
+to compile and output to the output directory.
 
 Compiler command reference:
 
-| Command   | Optional Parameters                                                                   | Description                                                                                                                                                                    |
-| --------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `init`    | `--entry <path>` `--set <Name[=Value]>` *(repeatable)* `--without <Name>` *(repeatable)* | Generate/update entry file (default `./__mcd__.md`), and write `--set` specified compile directives into the `#:compile` config section; `--without` removes/doesn't write specified directive items from entry config |
-| `compile` | `--entry <path>` `--overwrite <Name[=Value]>` *(repeatable)* `--ignore <Name>` *(repeatable)* | Compile entry file (default `./__mcd__.md`); `--overwrite` overrides/sets directive items in entry config for this compilation; `--ignore` temporarily disables directive items in entry config for this compilation |
-| `clean`   | `--entry <path>`                                                                      | Clean build artifacts: removes output files and logs derived from entry file configuration (plus implementation-defined temporary files)                                       |
+| Command   | Optional Parameters                                                                                                          | Description                                                                                                                                                                                                                                                                                                                                                            |
+|-----------|------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `init`    | `--entry <Path>` `--set <Name[=Value]>` *(repeatable)* `--without <Name>` *(repeatable)*                                     | Initialize (default in the working directory, can be modified via `entry`), and write compilation directives specified by `--set` into the `#:compile` configuration area; `--without` is used to remove/not write a directive item from the entry configuration area                                                                                                  |
+| `compile` | `--use <Config>` `--overwrite <Name[=Value]>` *(repeatable)* `--ignore <Name>` *(repeatable)* `--flag <Name>` *(repeatable)* | Execute compilation (default uses `Compile.md` as configuration, can be modified using `--use`); `--overwrite` overwrites/sets directive items in the entry configuration area for this compilation; `--ignore` temporarily disables directive items in the entry configuration area for this compilation; `--flag` adds flags (corresponding to compilation behavior) |
 
-Quick syntax reference:
+*Compilation directives:*
 
-| Syntax Structure | Simplified Equivalent | Description                                                                                                                      |
-| ---------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `#::`            | None                  | Explicitly declares this is a Mark:down file (no functionality); also commonly used as a "comment line" (not included in compiled Markdown) |
-| `#:1`~`#:6`      | None                  | Level x heading syntactic sugar; compiles to corresponding Markdown headings (`#`~`######`)                                      |
-| `#:image`        | `#:!`                 | Image line; parameter is image path, optional "(caption)"; compiles to Markdown image syntax                                     |
-| `#:link`         | `#:&`                 | Link line; parameter is URL, optional "(display text)"; compiles to Markdown link syntax                                         |
-| `#:row`          | `#:-`                 | Table row (commonly used as first/header row); comma-separated cells                                                             |
-| `#:column`       | `#:\|`                | Table row (commonly used for subsequent rows); comma-separated cells                                                             |
-| `#:ignore`       | `#:*`                 | Skip entire file during compilation (file produces no output)                                                                    |
-| `#:skip`         | `#:~`                 | Skip content between `skip` and `end` (or `=`), not included in final Markdown                                                   |
-| `#:compile`      | `#:;`                 | Compile directive. Can only be placed in entry file                                                                              |
-| `#:echo`         | `#:>`                 | Print information during compilation (for debugging/logging), doesn't affect final output                                        |
-| `#:end`          | `#:=`                 | Universal terminator; ends blocks like `skip/raw/code/if/while/for/template`                                                     |
-| `#:include`      | `#:$`                 | Import and directly merge another file (similar to preprocessor include)                                                         |
-| `#:define`       | `#:%`                 | Macro replacement: replaces matched text with target text during compilation (for simple "global replacement/alias")             |
-| `#:raw`          | `#:^`                 | Raw output mode: content between `raw` and `end` (or `=`) doesn't parse Mark:down directives, enters output as-is              |
-| `#:code`         | `#:?`                 | Execute neolua code; supports single line or code block form; code itself not included in compilation output, but can set variables/environment for subsequent `{{}}` and control flow |
-| `#:if`           | None                  | Conditional branch start; followed by expression; used with `elif/else/end` (or `=`)                                             |
-| `#:elif`         | None                  | "Else if" for conditional branch                                                                                                 |
-| `#:else`         | None                  | "Else" for conditional branch                                                                                                    |
-| `#:while`        | None                  | while loop; followed by conditional expression; ends with `end` (or `=`)                                                         |
-| `#:for`          | None                  | for loop; follows Lua syntax (e.g., `pairs/ipairs`); ends with `end` (or `=`)                                                    |
-| `#:template`     | `#:+`                 | Declare template: `TemplateName: param1, param2...`; reuse structure through parameter names within block                        |
-| `#:use`          | `#:@`                 | Call template: `TemplateName: arg1, arg2...`, expands and generates output by replacing parameters in order                      |
-| `{{ ... }}`      | None                  | Inline output: inserts expression result into text; `r{{}}` disables interpolation, preserving literal content                   |
+| Directive Name       | Parameter                                          | Default Value                                    | Description                                                                                                                                   |
+|----------------------|----------------------------------------------------|--------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------|
+| `Max_Compile_Time`   | Non-negative integer (ms)                          | Not set (timeout not enabled)                    | Compilation time limit (milliseconds); if not set, timeout is not enabled                                                                     |
+| `Max_Output_Bytes`   | Non-negative integer                               | Not set (no limit)                               | Maximum total output size (bytes); if not set, no limit                                                                                       |
+| `Max_Output_Files`   | Non-negative integer                               | Not set (no limit)                               | Maximum total output file count; if not set, no limit                                                                                         |
+| `Max_Include_Depth`  | Non-negative integer                               | Not set (no limit)                               | include recursion depth limit                                                                                                                 |
+| `Max_Template_Depth` | Non-negative integer                               | Not set (no limit)                               | template/use expansion depth limit                                                                                                            |
+| `Disable_Code`       | None                                               | Not set (no limit)                               | Disable code embedding, will report error when embedding occurs                                                                               |
+| `Ignore_Code`        | None                                               | Not set (no limit)                               | Ignore code embedding, no error when it occurs                                                                                                |
+| `Disable_Require`    | None                                               | Not set (no limit)                               | Disable `require(...)` statements in code, will report error when it occurs                                                                   |
+| `Require_Version`    | Version expression (supports comparison operators) | The `Mark:down` version that executed `mcd init` | Require compiler version to meet conditions (e.g., `>=1.2.0`)                                                                                 |
+| `Include_Base`       | Path                                               | `./Source`                                       | Base path for include relative path resolution                                                                                                |
+| `Input_Path`         | Path                                               | `./Source`                                       | Compilation input path                                                                                                                        |
+| `Output_Path`        | Path                                               | `./Compiled`                                     | Compilation output path                                                                                                                       |
+| `Input_Glob`         | Path wildcard                                      | `**/*.md`                                        | File wildcard for files to be treated as `Mark:down`                                                                                          |
+| `Raw_Glob`           | Path wildcard                                      | (Empty)                                          | `Mark:down` cares but doesn't process: matching files are copied as-is to output directory (only effective when copy strategy is implemented) |
+| `Ignore_Glob`        | Path wildcard                                      | `.mcdignore` `.mcdcopy`                          | `Mark:down` doesn't care and doesn't process: matching files don't enter output                                                               |
+| `Log_Path`           | Path                                               | `Log.md`                                         | Log output path                                                                                                                               |
+| `Overwrite_Output`   | `On/Off`                                           | `On`                                             | Whether to overwrite when output file already exists                                                                                          |
+| `GlobalInclude`      | Path wildcard                                      | `./Global.md`                                    | Automatically globally imported files (implicit `#include` at file beginning)                                                                 |
 
-See example:
+## Syntax
+
+You can get a quick overview of `Mark:down`'s extended syntax capabilities from this reference table:
+
+| Syntax Structure     | Simplified Equivalent | Description                                                                                                                                                                                 |
+|----------------------|-----------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `#::`                | None                  | Explicitly declares this is a Mark:down file (no functionality); also commonly used as a "comment line" (won't enter compiled Markdown).                                                    |
+| `#:1`~`#:6`          | None                  | x-level heading syntactic sugar; compiles to corresponding Markdown heading (`#`~`######`).                                                                                                 |
+| `#:image`            | `#:!`                 | Image line; parameter is image path, optional "(caption)"; compiles to Markdown image syntax.                                                                                               |
+| `#:link`             | `#:&`                 | Link line; parameter is URL, optional "(display text)"; compiles to Markdown link syntax.                                                                                                   |
+| `#:row`              | `#:-`                 | Table row (commonly used as first row/header row); comma-separated cells.                                                                                                                   |
+| `#:column`           | `#:\|`                | Table row (commonly used as subsequent rows); comma-separated cells.                                                                                                                        |
+| `#:ignore`           | `#:*`                 | Skip entire file during compilation (the file produces no output). Can be viewed as syntactic sugar for `#:if false`.                                                                       |
+| `#:skip`             | `#:~`                 | Skip content between `skip` and `end` (or `=`), doesn't enter final Markdown. Can be viewed as syntactic sugar for `#:if false`.                                                            |
+| `#:copy`             | `#:/`                 | Copy entire file during compilation. Can be viewed as syntactic sugar for `#:raw`.                                                                                                          |
+| `#:compile`          | `#:;`                 | Compilation directive. Can only be placed in entry file.                                                                                                                                    |
+| `#:echo`             | `#:>`                 | Print information during compilation phase (for debugging/logging purposes), doesn't affect final output content.                                                                           |
+| `#:end`              | `#:=`                 | Universal terminator; ends `skip/raw/code/if/while/for/template` etc. blocks.                                                                                                               |
+| `#:include`          | `#:$`                 | Import and directly merge another file (similar to preprocessor include).                                                                                                                   |
+| `#:define`           | `#:%`                 | Macro replacement: replaces matched text with target text during compilation (for simple "global replacement/aliasing").                                                                    |
+| `#:raw`              | `#:^`                 | Raw output mode: content between `raw` and `end` (or `=`) doesn't parse Mark:down directives, enters output as-is.                                                                          |
+| `#:code`             | `#:?`                 | Execute neolua code; supports single-line or code block form; code itself doesn't enter compilation output, but can set variables/environment for subsequent `{{}}` and control flow usage. |
+| `#:if`               | None                  | Conditional branch start; followed by expression; used with `elif/else/end` (or `=`).                                                                                                       |
+| `#:elif`             | None                  | "Else if" for conditional branch.                                                                                                                                                           |
+| `#:else`             | None                  | "Else" for conditional branch.                                                                                                                                                              |
+| `#:while`            | None                  | while loop; followed by conditional expression; ends with `end` (or `=`).                                                                                                                   |
+| `#:for`              | None                  | for loop; follows Lua syntax (e.g., `pairs/ipairs`); ends with `end` (or `=`).                                                                                                              |
+| `#:template`         | `#:+`                 | Declare template: `TemplateName: param1, param2...`; reuse structure within block through parameter names.                                                                                  |
+| `#:use`              | `#:@`                 | Call template: `TemplateName: arg1, arg2...`, expands and generates output by replacing in parameter order.                                                                                 |
+| `{{ ... }}`          | None                  | Inline output: inserts expression result into text; `r{{}}` disables interpolation, preserves literal content.                                                                              |
+| ` r`` ` and ` r``` ` | None                  | Raw code blocks (no substitution).                                                                                                                                                          |
+
+*Example:*
 
 ```markdown
 #:: `#::` explicitly declares this is a Mark:down file, you can also use it as a comment
-#:: Note `#:` is immediately followed by the corresponding directive, with no space
+#:: Note that `#:` is immediately followed by the corresponding directive, with no spaces
 
-#:: Level x heading syntactic sugar
+#:: x-level heading syntactic sugar
 #:1
 #:2
 #:3
@@ -92,13 +133,13 @@ See example:
 
 #:: Image line, two equivalent ways to write
 #:image ./MyImage.png
-#:! ./MyImage.png (with caption note, otherwise no caption)
+#:! ./MyImage.png (with caption description, otherwise no caption)
 
 #:: Link line
-#:link http://mylink.com (displays as content in parentheses, otherwise display text matches link text)
+#:link http://mylink.com (displays as content in parentheses, otherwise display text and link text are identical)
 #:& http://mylink.com
 
-#:: A table with 2 columns and 3 rows, you can also use full names `#:row` and `#:column`
+#:: A two-column three-row table, you can also use the full names `#:row` and `#:column`
 #:- row1, row2
 #:| 1, 2
 #:| 3, 4
@@ -109,12 +150,12 @@ See example:
 #:: skip will skip the corresponding part during compilation
 #:skip
 
-#:: echo will print corresponding information during compilation
-#:echo Compiling to here
+#:: echo will print the corresponding information during compilation
+#:echo Compiled to here
 
-This content will be skipped, not appearing in final compilation result
+This part of the content will be skipped and won't appear in the final compilation result
 
-#:: Universal terminator symbol, used by `#:if`, `#:for`, `#:code` etc. Can also be written in simplified form
+#:: Universal terminator symbol, including `#:if`, `#:for`, `#:code` etc. all use this symbol. Can also be written in simplified form
 #:end
 #:=
 
@@ -126,28 +167,60 @@ This content will be skipped, not appearing in final compilation result
 
 True will be replaced with False during compilation // After compilation: False will be replaced with True
 
-#:: Preserve raw content, skip syntax provided by Mark:down
+#:: Preserve native content, skip syntax provided by Mark:down
 #:raw
 
 This True will still be True after compilation
 
 #:=
 
-#:: code executes code. If non-empty after code, it's a single line; if empty after code, content in between is treated as code block
-#:: Code executed in code won't output to compiled Markdown
+#:: Code blocks can use r``` and r``, won't be escaped
+Below is a piece of Vue code, including r`{{ }}`, won't be translated:
+
+r```
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Vue {{}} Simplest Example</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  </head>
+
+  <body>
+    <div id="app">
+      <h1>{{ message }}</h1>
+    </div>
+
+    <script>
+      const { createApp } = Vue;
+
+      createApp({
+        data() {
+          return {
+            message: "Hello, Vue!"
+          };
+        }
+      }).mount("#app");
+    </script>
+  </body>
+</html>
+```
+
+#:: code executes code. If code is followed by non-empty content, it's a single line of code; if code is followed by empty, then the middle part is viewed as a code block
+#:: Code executed in code won't be output to the compiled Markdown
 #:code version = "1.0" -- neolua syntax
 #:code
 require("../global.lua") -- can import other lua files
 
-print("Mark:down doesn't guarantee code safety, doesn't run in sandbox, flexible and powerful but you're responsible for code security")
+print("Mark:down does not guarantee the security of called code, doesn't run in a sandbox, while being flexible and powerful you need to be responsible for the security of the code yourself")
 
 version = global.version
 count = 0
 #:=
 
-#:: {{}} represents inline block, will embed the result of corresponding expression. Use r{{}} to avoid embedding
-The document version is {{ version }}
-And this r{{ version }} will preserve exactly the same text after compilation
+#:: {{}} indicates an inline block, will embed the result of the corresponding expression. Use r{{}} to avoid embedding
+The version of the document is {{ version }}
+And this r{{ version }} compiled text will remain completely identical
 
 #:: Selection control flow, followed by an expression
 #:if version == "1.0"
@@ -155,78 +228,31 @@ Version is 1.0
 #:elif version == "2.0"
 Version is 2.0
 #:else
-Version is other version
+Version is another version
 #:=
 
-#:: while loop, also followed by expression
+#:: while loop, also followed by an expression
 #:while count < 10
-Loop number {{ count }}
+The {{ count }}th loop
 #:code count += 1
 
 #:- Keyword, Description
 #:: for loop, follows lua syntax, can use pairs or ipairs
-#:: Print Mark:down's keyword and description list
+#:: Print the list of Mark:down keywords and descriptions
 #:for keyword, info in pairs(global.mark_colon_down_keyword)
 #:| keyword, info
 #:=
 
-#:: Template system for structure reuse
-#:: Declare template name (PascalCase): parameter names (camelCase), equivalent to define replacement
+#:: Template system, for reusing structures
+#:: Declare template name (PascalCase): parameter name (camelCase), equivalent to define replacement
 #:template ProgramInfo: name, author, version
 Software name: name
 Author: author
 Version: version
 #:=
 
-#:: Call this template
+#:: Call the template
 #:use ProgramInfo: Quick Example, WaterRun, 1.0
 
-#:: We more commonly place called templates in a separate common .md file, then include it for access
-```
-
-Compile directives:
-
-| Directive Name               | Parameter                      | Description                                                                   |
-| ---------------------------- | ------------------------------ | ----------------------------------------------------------------------------- |
-| `Max_Compile_Time`           | Non-negative integer (ms)      | Compilation timeout (milliseconds); timeout not enabled if not set            |
-| `Max_Output_Bytes`           | Non-negative integer           | Maximum total output size (bytes); unlimited if not set                       |
-| `Max_Include_Depth`          | Non-negative integer           | include recursion depth limit                                                 |
-| `Max_Template_Depth`         | Non-negative integer           | template/use expansion depth limit                                            |
-| `Max_Loop_Iterations`        | Non-negative integer           | `for/while` total iteration count limit (prevent infinite loops)              |
-| `Disable_Code`               | None                           | Disable code embedding                                                        |
-| `Ignore_Code`                | None                           | Ignore code embedding (don't execute `#:code`)                                |
-| `Disable_Require`            | None                           | Disable `require(...)` in code                                                |
-| `Require_Version`            | Version expression (supports comparison operators) | Require compiler version to meet condition (e.g., `>=1.2.0`)    |
-| `Include_Base`               | Path                           | Base path for resolving include relative paths                                |
-| `Allow_Include_Outside_Base` | `On/Off`                       | Whether to allow include to jump out of `Include_Base`                        |
-| `Output_Path`                | Path                           | Compilation result output path                                                |
-| `Input_Glob`                 | Path wildcard                  | File wildcard to be treated as Mark:down (usually no need to set when entry-driven) |
-| `Copy_Glob`                  | Path wildcard                  | Mark:down cares but doesn't process: matched files copied as-is to output directory (only effective when implementing copy strategy) |
-| `Ignore_Glob`                | Path wildcard                  | Mark:down doesn't care and doesn't process: matched files not included in output |
-| `Log_Path`                   | Path                           | Log output path                                                               |
-| `Overwrite_Output`           | `On/Off`                       | Whether to overwrite when output file already exists                          |
-
-Default entry `__MCD__.md` contains the following parameters:
-
-```markdown
-#:compile Max_Compile_Time 100000
-#:compile Max_Output_Bytes 10485760
-#:compile Max_Include_Depth 32
-#:compile Max_Template_Depth 64
-#:compile Max_Loop_Iterations 200000
-
-#:compile Require_Version >=(initialized Mark:down version)
-
-#:: include base (relative paths are resolved from this base)
-#:compile Include_Base .
-#:compile Allow_Include_Outside_Base Off
-
-#:: output & log
-#:compile Output_Path ../__MCD__.compiled.md
-#:compile Log_Path ./__mcd__.log
-#:compile Overwrite_Output On
-
-#:: ignore common IDE/build artifacts (glob)
-#:: separator recommendation: use ';' between patterns (implementation-defined)
-#:compile Ignore_Glob ".git/**;.idea/**;.vscode/**;.vs/**;target/**;node_modules/**;dist/**;build/**;out/**;bin/**;obj/**;__pycache__/**;*.tmp;*.log"
+#:: We more commonly place the called template in a separate shared .md file, then include it to access
 ```

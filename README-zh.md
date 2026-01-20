@@ -6,7 +6,7 @@
 
 ## 概述
 
-`Mark:down`是一个 Markdown 模板引擎, 作为 Markdown 的严格超集, 编译为 Markdown, 为 Markdown 的编写提供了:
+`Mark:down`是一个强大的 Markdown 模板引擎, 作为 Markdown 的严格超集, 编译为 Markdown, 为 Markdown 的编写提供了:
 
 - 语法糖: 如`#:4`(四级标题), `#:!`/`#:image`(图片行), `#:row`和`#:column`(表格)等
 - 预处理: 如`#:include`进行文件导入, `#:define`宏定义等
@@ -22,6 +22,21 @@
 
 ## 速览
 
+一个`Mark:down`项目的典型目录应当如:  
+
+```plaintext
+│  Compile.md # 编译入口, 编译器将首先进入此文件, 加载对应的编译指令
+│  Log.md # 日志
+│  Global.md # 存储全局的变量, 模板等内容, 默认配置下自动导入每一个编译的文件中
+│
+├─Compiled # 编译后的结果存储在此目录
+└─Source # "源码"
+```
+
+![编译流程图](./Assets/CompileFlow.png)  
+
+## 编译器  
+
 `mcd`是`Mark:down`提供的编译器.  
 
 安装后, 使用:  
@@ -30,7 +45,7 @@
 mcd init
 ```
 
-进行初始化, 这将在目录下生成`__mcd__.md`(入口文件)以及对应的日志`__mcd__.log`.  
+进行初始化, 这将在目录下生成`Compile.md`以及对应的日志`Log.md`.  
 
 使用:  
 
@@ -38,45 +53,71 @@ mcd init
 mcd compile
 ```
 
-进行编译.  
+进行编译, 输出至输出目录.  
 
 编译器指令参考:  
 
-| 指令      | 可选参数                                                                              | 说明                                                                                                                                              |
-|-----------|---------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|
-| `init`    | `--entry <path>` `--set <Name[=Value]>` *(可重复)* `--without <Name>` *(可重复)*      | 生成/更新入口文件（默认 `./__mcd__.md`），并将 `--set` 指定的编译指令写入 `#:compile` 配置区；`--without` 用于从入口配置区移除/不写入某个指令项   |
-| `compile` | `--entry <path>` `--overwrite <Name[=Value]>` *(可重复)* `--ignore <Name>` *(可重复)* | 编译入口文件（默认 `./__mcd__.md`）；`--overwrite` 在本次编译中覆写/设置入口配置区中的指令项；`--ignore` 在本次编译中临时禁用入口配置区中的指令项 |
-| `clean`   | `--entry <path>`                                                                      | 清理构建产物：清理由入口文件配置推导的输出文件与日志（以及实现定义的临时文件）                                                                    |
+| 指令      | 可选参数                                                                                                         | 说明                                                                                                                                                                                                        |
+|-----------|------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `init`    | `--entry <Path>` `--set <Name[=Value]>` *(可重复)* `--without <Name>` *(可重复)*                                 | 初始化(默认在运行目录, 可通过`entry`修改)，并将 `--set` 指定的编译指令写入 `#:compile` 配置区；`--without` 用于从入口配置区移除/不写入某个指令项                                                            |
+| `compile` | `--use <Config>` `--overwrite <Name[=Value]>` *(可重复)* `--ignore <Name>` *(可重复)* `--flag <Name>` *(可重复)* | 执行编译(默认使用`Compile.md`作为配置, 可使用`--use`进行修改)；`--overwrite` 在本次编译中覆写/设置入口配置区中的指令项；`--ignore` 在本次编译中临时禁用入口配置区中的指令项；`--flag`添加标记(对应编译行为) |
 
-语法快速参考:  
+*编译指令:*
 
-| 语法结构     | 等效简化 | 说明                                                                                                          |
-|--------------|----------|---------------------------------------------------------------------------------------------------------------|
-| `#::`        | 无       | 显式声明这是一个 Mark:down 文件(无功能)；也常作为作为“注释行”使用（不会进入编译后的 Markdown）。              |
-| `#:1`~`#:6`  | 无       | x 级标题语法糖；编译为对应 Markdown 标题（`#`~`######`）。                                                    |
-| `#:image`    | `#:!`    | 图片行；参数为图片路径，可选“(注解)”；编译为 Markdown 图片语法。                                              |
-| `#:link`     | `#:&`    | 链接行；参数为 URL，可选“(显示文本)”；编译为 Markdown 链接语法。                                              |
-| `#:row`      | `#:-`    | 表格行（常用作第一行/表头行）；逗号分隔单元格。                                                               |
-| `#:column`   | `#:\|`   | 表格行（常用作后续行）；逗号分隔单元格。                                                                      |
-| `#:ignore`   | `#:*`    | 编译时跳过整个文件（该文件不产生任何输出）。                                                                  |
-| `#:skip`     | `#:~`    | 跳过 `skip` 与 `end`（或 `=`）之间的内容，不进入最终 Markdown。                                               |
-| `#:compile`  | `#:;`    | 编译指令。只能放在入口文件。                                                                                  |
-| `#:echo`     | `#:>`    | 编译阶段打印信息（调试/日志用途），不影响最终输出内容。                                                       |
-| `#:end`      | `#:=`    | 通用终止符；结束 `skip/raw/code/if/while/for/template` 等块。                                                 |
-| `#:include`  | `#:$`    | 导入并直接合并另一个文件（类似预处理 include）。                                                              |
-| `#:define`   | `#:%`    | 宏替换：编译期将匹配到的文本替换为目标文本（用于简易“全局替换/别名”）。                                       |
-| `#:raw`      | `#:^`    | 原样输出模式：`raw` 与 `end`（或 `=`）之间不解析 Mark:down 指令，按原文进入输出。                             |
-| `#:code`     | `#:?`    | 执行 neolua 代码；支持单行或代码块形式；代码本身不进入编译输出，但可设置变量/环境供后续 `{{}}` 与控制流使用。 |
-| `#:if`       | 无       | 条件分支开始；后跟表达式；与 `elif/else/end`（或 `=`）配合使用。                                              |
-| `#:elif`     | 无       | 条件分支的“否则如果”。                                                                                        |
-| `#:else`     | 无       | 条件分支的“否则”。                                                                                            |
-| `#:while`    | 无       | while 循环；后跟条件表达式；以 `end`（或 `=`）结束。                                                          |
-| `#:for`      | 无       | for 循环；遵循 Lua 语法（如 `pairs/ipairs`）；以 `end`（或 `=`）结束。                                        |
-| `#:template` | `#:+`    | 声明模板：`TemplateName: param1, param2...`；块内通过参数名复用结构。                                         |
-| `#:use`      | `#:@`    | 调用模板：`TemplateName: arg1, arg2...`，按参数顺序替换展开生成输出。                                         |
-| `{{ ... }}`  | 无       | 内嵌输出：将表达式结果插入文本；`r{{}}` 禁用插值，保留字面量内容。                                            |
+| 指令名               | 参数                     | 默认值                          | 说明                                                                           |
+|----------------------|--------------------------|---------------------------------|--------------------------------------------------------------------------------|
+| `Max_Compile_Time`   | 非负整数(ms)             | 未设置（不启用超时）            | 编译限时（毫秒）；未设置则不启用超时                                           |
+| `Max_Output_Bytes`   | 非负整数                 | 未设置（不限制）                | 最大总输出大小（字节）；未设置则不限制                                         |
+| `Max_Output_Files`   | 非负整数                 | 未设置（不限制）                | 最大总输出文件数；未设置则不限制                                               |
+| `Max_Include_Depth`  | 非负整数                 | 未设置（不限制）                | include 递归深度上限                                                           |
+| `Max_Template_Depth` | 非负整数                 | 未设置（不限制）                | template/use 展开深度上限                                                      |
+| `Disable_Code`       | 无                       | 未设置（不限制）                | 禁用代码内嵌, 出现内嵌时将会报错                                               |
+| `Ignore_Code`        | 无                       | 未设置（不限制）                | 忽略代码内嵌, 出现时不报错                                                     |
+| `Disable_Require`    | 无                       | 未设置（不限制）                | 禁用代码中的 `require(...)` 语句, 出现时将会报错                               |
+| `Require_Version`    | 版本表达式（支持比较符） | 执行`mcd init`的`Mark:down`版本 | 要求编译器版本满足条件（如 `>=1.2.0`）                                         |
+| `Include_Base`       | 路径                     | `./Source`                      | include 相对路径解析的基路径                                                   |
+| `Input_Path`         | 路径                     | `./Source`                      | 编译输入路径                                                                   |
+| `Output_Path`        | 路径                     | `./Compiled`                    | 编译输出路径                                                                   |
+| `Input_Glob`         | 路径通配符               | `**/*.md`                       | 需要被当作 `Mark:down` 处理的文件通配符                                        |
+| `Raw_Glob`           | 路径通配符               | （空）                          | `Mark:down` 关心但不处理：匹配文件原样复制到输出目录（仅在实现复制策略时生效） |
+| `Ignore_Glob`        | 路径通配符               | `.mcdignore` `.mcdcopy`         | `Mark:down` 不关心也不处理：匹配文件不进入输出                                 |
+| `Log_Path`           | 路径                     | `Log.md`                        | 日志输出路径                                                                   |
+| `Overwrite_Output`   | `On/Off`                 | `On`                            | 输出文件已存在时是否覆写                                                       |
+| `GlobalInclude`      | 路径通配符               | `./Global.md`                   | 自动全局导入的文件(文件开头隐含`#include`)                                     |
 
-参见示例:
+## 语法  
+
+可从此参考表速览`Mark:down`提供的扩展语法能力:  
+
+| 语法结构            | 等效简化 | 说明                                                                                                          |
+|---------------------|----------|---------------------------------------------------------------------------------------------------------------|
+| `#::`               | 无       | 显式声明这是一个 Mark:down 文件(无功能)；也常作为作为“注释行”使用（不会进入编译后的 Markdown）。              |
+| `#:1`~`#:6`         | 无       | x 级标题语法糖；编译为对应 Markdown 标题（`#`~`######`）。                                                    |
+| `#:image`           | `#:!`    | 图片行；参数为图片路径，可选“(注解)”；编译为 Markdown 图片语法。                                              |
+| `#:link`            | `#:&`    | 链接行；参数为 URL，可选“(显示文本)”；编译为 Markdown 链接语法。                                              |
+| `#:row`             | `#:-`    | 表格行（常用作第一行/表头行）；逗号分隔单元格。                                                               |
+| `#:column`          | `#:\|`   | 表格行（常用作后续行）；逗号分隔单元格。                                                                      |
+| `#:ignore`          | `#:*`    | 编译时跳过整个文件（该文件不产生任何输出）。可以视为`#:if false`的语法糖。                                    |
+| `#:skip`            | `#:~`    | 跳过 `skip` 与 `end`（或 `=`）之间的内容，不进入最终 Markdown。可以视为`#:if false`的语法糖。                 |
+| `#:copy`            | `#:/`    | 编译时复制整个文件。可以视为`#:raw`的语法糖。                                                                 |
+| `#:compile`         | `#:;`    | 编译指令。只能放在入口文件。                                                                                  |
+| `#:echo`            | `#:>`    | 编译阶段打印信息（调试/日志用途），不影响最终输出内容。                                                       |
+| `#:end`             | `#:=`    | 通用终止符；结束 `skip/raw/code/if/while/for/template` 等块。                                                 |
+| `#:include`         | `#:$`    | 导入并直接合并另一个文件（类似预处理 include）。                                                              |
+| `#:define`          | `#:%`    | 宏替换：编译期将匹配到的文本替换为目标文本（用于简易“全局替换/别名”）。                                       |
+| `#:raw`             | `#:^`    | 原样输出模式：`raw` 与 `end`（或 `=`）之间不解析 Mark:down 指令，按原文进入输出。                             |
+| `#:code`            | `#:?`    | 执行 neolua 代码；支持单行或代码块形式；代码本身不进入编译输出，但可设置变量/环境供后续 `{{}}` 与控制流使用。 |
+| `#:if`              | 无       | 条件分支开始；后跟表达式；与 `elif/else/end`（或 `=`）配合使用。                                              |
+| `#:elif`            | 无       | 条件分支的“否则如果”。                                                                                        |
+| `#:else`            | 无       | 条件分支的“否则”。                                                                                            |
+| `#:while`           | 无       | while 循环；后跟条件表达式；以 `end`（或 `=`）结束。                                                          |
+| `#:for`             | 无       | for 循环；遵循 Lua 语法（如 `pairs/ipairs`）；以 `end`（或 `=`）结束。                                        |
+| `#:template`        | `#:+`    | 声明模板：`TemplateName: param1, param2...`；块内通过参数名复用结构。                                         |
+| `#:use`             | `#:@`    | 调用模板：`TemplateName: arg1, arg2...`，按参数顺序替换展开生成输出。                                         |
+| `{{ ... }}`         | 无       | 内嵌输出：将表达式结果插入文本；`r{{}}` 禁用插值，保留字面量内容。                                            |
+| ` r`` ` 和 ` r``` ` | 无       | 原始代码块(不替换)。                                                                                          |
+
+*示例:*
 
 ```markdown
 #:: `#::`显式的声明这是一个 Mark:down 文件, 你也可以作为注释使用  
@@ -133,6 +174,38 @@ True 将在编译时替换为 False // 编译后: False 将在编译时替换为
 
 #:=
 
+#:: 代码块可以使用r```和r``, 不会被转义  
+下面是一段Vue代码, 包括r`{{ }}`, 不会被转译:  
+
+r```
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>Vue {{}} 最简单示例</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  </head>
+
+  <body>
+    <div id="app">
+      <h1>{{ message }}</h1>
+    </div>
+
+    <script>
+      const { createApp } = Vue;
+
+      createApp({
+        data() {
+          return {
+            message: "Hello, Vue!"
+          };
+        }
+      }).mount("#app");
+    </script>
+  </body>
+</html>
+```
+
 #:: code 执行代码. 如果 code 后非空, 为一行代码; 如果 code 后为空, 则中间的视为代码块
 #:: 在 code 中执行的代码不会输出到编译后的 Markdown 中
 #:code version = "1.0" -- neolua 语法
@@ -182,51 +255,4 @@ count = 0
 #:use ProgramInfo: 快速示例, WaterRun, 1.0
 
 #:: 我们更常将调用的模板放置在一个独立的公用.md 文件中, 然后 include 进来进行访问
-```
-
-编译指令:
-
-| 指令名                       | 参数                     | 说明                                                                         |
-|------------------------------|--------------------------|------------------------------------------------------------------------------|
-| `Max_Compile_Time`           | 非负整数(ms)             | 编译限时（毫秒）；未设置则不启用超时                                         |
-| `Max_Output_Bytes`           | 非负整数                 | 最大总输出大小（字节）；未设置则不限制                                       |
-| `Max_Include_Depth`          | 非负整数                 | include 递归深度上限                                                         |
-| `Max_Template_Depth`         | 非负整数                 | template/use 展开深度上限                                                    |
-| `Max_Loop_Iterations`        | 非负整数                 | `for/while` 总迭代次数上限（防死循环）                                       |
-| `Disable_Code`               | 无                       | 禁用代码内嵌                                                                 |
-| `Ignore_Code`                | 无                       | 忽略代码内嵌（不执行 `#:code`）                                              |
-| `Disable_Require`            | 无                       | 禁用代码中的 `require(...)`                                                  |
-| `Require_Version`            | 版本表达式（支持比较符） | 要求编译器版本满足条件（如 `>=1.2.0`）                                       |
-| `Include_Base`               | 路径                     | include 相对路径解析的基路径                                                 |
-| `Allow_Include_Outside_Base` | `On/Off`                 | 是否允许 include 跳出 `Include_Base`                                         |
-| `Output_Path`                | 路径                     | 编译结果输出路径                                                             |
-| `Input_Glob`                 | 路径通配符               | 需要被当作 Mark:down 处理的文件通配符（仅入口驱动时通常无需设置）            |
-| `Copy_Glob`                  | 路径通配符               | Mark:down 关心但不处理：匹配文件原样复制到输出目录（仅在实现复制策略时生效） |
-| `Ignore_Glob`                | 路径通配符               | Mark:down 不关心也不处理：匹配文件不进入输出                                 |
-| `Log_Path`                   | 路径                     | 日志输出路径                                                                 |
-| `Overwrite_Output`           | `On/Off`                 | 输出文件已存在时是否覆写                                                     |
-
-默认入口`__MCD__.md`包含以下参数:  
-
-```markdown
-#:compile Max_Compile_Time 100000
-#:compile Max_Output_Bytes 10485760
-#:compile Max_Include_Depth 32
-#:compile Max_Template_Depth 64
-#:compile Max_Loop_Iterations 200000
-
-#:compile Require_Version >=(初始化的 Mark:down 版本)
-
-#:: include base (relative paths are resolved from this base)
-#:compile Include_Base .
-#:compile Allow_Include_Outside_Base Off
-
-#:: output & log
-#:compile Output_Path ../__MCD__.compiled.md
-#:compile Log_Path ./__mcd__.log
-#:compile Overwrite_Output On
-
-#:: ignore common IDE/build artifacts (glob)
-#:: separator recommendation: use ';' between patterns (implementation-defined)
-#:compile Ignore_Glob ".git/**;.idea/**;.vscode/**;.vs/**;target/**;node_modules/**;dist/**;build/**;out/**;bin/**;obj/**;__pycache__/**;*.tmp;*.log"
 ```
