@@ -4,19 +4,15 @@
 
 ![Logo](./Assets/Logo.png)
 
-## 概述
+`Mark:down`是一个强大的 Markdown 模板引擎, 作为 Markdown 的严格超集, 编译为 Markdown, 以`#:`开头的"行指令"为标志性的语法为 Markdown 的编写提供了:
 
-`Mark:down`是一个强大的 Markdown 模板引擎, 作为 Markdown 的严格超集, 编译为 Markdown, 为 Markdown 的编写提供了:
+- *语法糖*: 如`#:4`(四级标题), `#:!`/`#:image`(图片行), `#:row`和`#:column`(表格)等
+- *预处理能力*: 如`#:include`进行文件导入(实现类似头文件, 或置于代码块中的全局变量), `#:define`宏定义等
+- *控制流*: 包括`#:if`, `#:else`, `#:while`, `#:for`等
+- *内嵌代码*: 内嵌[neolua](https://github.com/neolithos/neolua), 极大扩展可能. 包括`#:code`执行代码块, `{{}}`在文本中内嵌输出等
+- *模板系统*: 通过`#:template`实现相同结构复用
 
-- 语法糖: 如`#:4`(四级标题), `#:!`/`#:image`(图片行), `#:row`和`#:column`(表格)等
-- 预处理: 如`#:include`进行文件导入, `#:define`宏定义等
-- 控制流: 包括`#:if`, `#:else`, `#:while`, `#:for`等
-- 内嵌代码: 内嵌[neolua](https://github.com/neolithos/neolua), 极大扩展可能. 包括`#:code`执行代码块, `{{}}`在文本中内嵌输出等
-- 模板系统: 通过`#:template`实现相同结构复用
-
-`Mark:down`标志性的语法是`#:`开头的"行指令", 以及`{{}}`的内嵌输出.
-
-`Mark:down`使用`C# AOT`开发, 提供`Visual Studio Code`插件.
+`Mark:down`使用`C# AOT`开发, 提供`Visual Studio Code`插件.  
 
 > `Mark:down`开源于[GitHub](https://github.com/Water-Run/MarkColonDown), 你可以在上面阅读[完整文档](https://github.com/Water-Run/MarkColonDown/tree/main/Documents/CompiledDoucuments)
 
@@ -32,6 +28,8 @@
 ├─Compiled # 编译后的结果存储在此目录
 └─Source # "源码"
 ```
+
+编译流程如下图所示:  
 
 ![编译流程图](./Assets/CompileFlow.png)  
 
@@ -57,10 +55,10 @@ mcd compile
 
 编译器指令参考:  
 
-| 指令      | 可选参数                                                                                                         | 说明                                                                                                                                                                                                        |
-|-----------|------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `init`    | `--entry <Path>` `--set <Name[=Value]>` *(可重复)* `--without <Name>` *(可重复)*                                 | 初始化(默认在运行目录, 可通过`entry`修改)，并将 `--set` 指定的编译指令写入 `#:compile` 配置区；`--without` 用于从入口配置区移除/不写入某个指令项                                                            |
-| `compile` | `--use <Config>` `--overwrite <Name[=Value]>` *(可重复)* `--ignore <Name>` *(可重复)* `--flag <Name>` *(可重复)* | 执行编译(默认使用`Compile.md`作为配置, 可使用`--use`进行修改)；`--overwrite` 在本次编译中覆写/设置入口配置区中的指令项；`--ignore` 在本次编译中临时禁用入口配置区中的指令项；`--flag`添加标记(对应编译行为) |
+| 指令      | 可选参数                                                                                                         | 说明                                                                                                                                                                                          |
+|-----------|------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `init`    | `--entry <Path>` `--set <Name[=Value]>` *(可重复)* `--without <Name>` *(可重复)*                                 | 初始化(默认在运行目录, 可通过`entry`修改)，并将 `--set` 指定的编译指令写入 `#:compile` 配置区；`--without` 用于从入口配置区移除/不写入某个指令项                                              |
+| `compile` | `--use <Config>` `--overwrite <Name[=Value]>` *(可重复)* `--ignore <Name>` *(可重复)* `--flag <Name>` *(可重复)* | 执行编译(默认使用`Compile.md`作为配置, 可使用`--use`进行修改)；`--overwrite` 在本次编译中覆写/设置入口配置区中的指令项；`--ignore` 在本次编译中临时禁用入口配置区中的指令项；`--flag`添加标记 |
 
 *编译指令:*
 
@@ -82,8 +80,7 @@ mcd compile
 | `Raw_Glob`           | 路径通配符               | （空）                          | `Mark:down` 关心但不处理：匹配文件原样复制到输出目录（仅在实现复制策略时生效） |
 | `Ignore_Glob`        | 路径通配符               | `.mcdignore` `.mcdcopy`         | `Mark:down` 不关心也不处理：匹配文件不进入输出                                 |
 | `Log_Path`           | 路径                     | `Log.md`                        | 日志输出路径                                                                   |
-| `Overwrite_Output`   | `On/Off`                 | `On`                            | 输出文件已存在时是否覆写                                                       |
-| `GlobalInclude`      | 路径通配符               | `./Global.md`                   | 自动全局导入的文件(文件开头隐含`#include`)                                     |
+| `Global_Include`     | 路径通配符               | `./Global.md`                   | 自动全局导入的文件(文件开头隐含`#include`)                                     |
 
 ## 语法  
 
@@ -116,6 +113,9 @@ mcd compile
 | `#:use`             | `#:@`    | 调用模板：`TemplateName: arg1, arg2...`，按参数顺序替换展开生成输出。                                         |
 | `{{ ... }}`         | 无       | 内嵌输出：将表达式结果插入文本；`r{{}}` 禁用插值，保留字面量内容。                                            |
 | ` r`` ` 和 ` r``` ` | 无       | 原始代码块(不替换)。                                                                                          |
+
+> 在行指令`#:`之后,可以添加一个`<>`,表示满足对应flag时认可语句(否则视为语句不存在). 比如`#:<flag1>if`  
+>> 在`<>`内可以有一个或多个flag: `&`表示且, `|`表示或, `!`表示非, `()`表示优先级. 如`#:<flag1&(flag2|!flag3)>else`  
 
 *示例:*
 
@@ -152,6 +152,8 @@ mcd compile
 
 #:: echo 将在编译时打印对应的信息
 #:echo 编译到这里了
+#:: echo的简化形式与flag, 仅在编译标记对应flag的时候显示  
+#:<isflagged>> 且标记了flag  
 
 此部分内容将被跳过, 不在最终编译结果中出现
 
@@ -173,38 +175,6 @@ True 将在编译时替换为 False // 编译后: False 将在编译时替换为
 这个 True 在编译后仍然是 True
 
 #:=
-
-#:: 代码块可以使用r```和r``, 不会被转义  
-下面是一段Vue代码, 包括r`{{ }}`, 不会被转译:  
-
-r```
-<!doctype html>
-<html lang="zh-CN">
-  <head>
-    <meta charset="utf-8" />
-    <title>Vue {{}} 最简单示例</title>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-  </head>
-
-  <body>
-    <div id="app">
-      <h1>{{ message }}</h1>
-    </div>
-
-    <script>
-      const { createApp } = Vue;
-
-      createApp({
-        data() {
-          return {
-            message: "Hello, Vue!"
-          };
-        }
-      }).mount("#app");
-    </script>
-  </body>
-</html>
-```
 
 #:: code 执行代码. 如果 code 后非空, 为一行代码; 如果 code 后为空, 则中间的视为代码块
 #:: 在 code 中执行的代码不会输出到编译后的 Markdown 中
