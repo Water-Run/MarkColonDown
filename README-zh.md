@@ -6,7 +6,7 @@
 
 `Mark:down`是一个强大的 Markdown 模板引擎, 作为 Markdown 的严格超集, 编译为 Markdown, 以`#:`开头的"行指令"为标志性的语法为 Markdown 的编写提供了:
 
-- *语法糖*: 如`#:4`(四级标题), `#:!`/`#:image`(图片行), `#:row`和`#:column`(表格)等
+- *语法糖*: 如`#:4`(四级标题), `#:!`/`#:image`(图片行), `#:-`/`#:table`(表格块, CSV语法)等
 - *预处理能力*: 如`#:include`进行文件导入(实现类似头文件, 或置于代码块中的全局变量), `#:define`宏定义等
 - *控制流*: 包括`#:if`, `#:else`, `#:while`, `#:for`等
 - *内嵌代码*: 内嵌[neolua](https://github.com/neolithos/neolua), 极大扩展可能. 包括`#:code`执行代码块, `{{}}`在文本中内嵌输出等
@@ -92,14 +92,13 @@ mcd compile
 | `#:1`~`#:6`         | 无       | x 级标题语法糖；编译为对应 Markdown 标题（`#`~`######`）。                                                    |
 | `#:image`           | `#:!`    | 图片行；参数为图片路径，可选“(注解)”；编译为 Markdown 图片语法。                                              |
 | `#:link`            | `#:&`    | 链接行；参数为 URL，可选“(显示文本)”；编译为 Markdown 链接语法。                                              |
-| `#:row`             | `#:-`    | 表格行（常用作第一行/表头行）；逗号分隔单元格。                                                               |
-| `#:column`          | `#:\|`   | 表格行（常用作后续行）；逗号分隔单元格。                                                                      |
+| `#:table`           | `#:-`    | 表格块开始；到 `#:=` 结束；块内使用 CSV 语法（逗号分隔单元格，支持引号转义）。                                |
 | `#:ignore`          | `#:*`    | 编译时跳过整个文件（该文件不产生任何输出）。可以视为`#:if false`的语法糖。                                    |
 | `#:skip`            | `#:~`    | 跳过 `skip` 与 `end`（或 `=`）之间的内容，不进入最终 Markdown。可以视为`#:if false`的语法糖。                 |
 | `#:copy`            | `#:/`    | 编译时复制整个文件。可以视为`#:raw`的语法糖。                                                                 |
 | `#:compile`         | `#:;`    | 编译指令。只能放在入口文件。                                                                                  |
 | `#:echo`            | `#:>`    | 编译阶段打印信息（调试/日志用途），不影响最终输出内容。                                                       |
-| `#:end`             | `#:=`    | 通用终止符；结束 `skip/raw/code/if/while/for/template` 等块。                                                 |
+| `#:end`             | `#:=`    | 通用终止符；结束 `skip/raw/code/if/while/for/template/table` 等块。                                           |
 | `#:include`         | `#:$`    | 导入并直接合并另一个文件（类似预处理 include）。                                                              |
 | `#:define`          | `#:%`    | 宏替换：编译期将匹配到的文本替换为目标文本（用于简易“全局替换/别名”）。                                       |
 | `#:raw`             | `#:^`    | 原样输出模式：`raw` 与 `end`（或 `=`）之间不解析 Mark:down 指令，按原文进入输出。                             |
@@ -133,16 +132,22 @@ mcd compile
 
 #:: 图片行, 两种写法等效
 #:image ./我的图片.png
-#:! ./我的图片.png (带注解说明,否则无注解)
+#:! ./我的图片.png(带注解说明,否则无注解)
 
 #:: 链接行
-#:link http://mylink.com (显示为括号内的内容, 否则显示文本和链接文本一致)
+#:link http://mylink.com(显示为括号内的内容, 否则显示文本和链接文本一致)
 #:& http://mylink.com
 
-#:: 一个两列三行的表格, 你也可以用`#:row`和`#:column`全称  
-#:- row1, row2
-#:| 1, 2
-#:| 3, 4
+#:: 链接行前缀
+#:&- https://github.com/Water-Run/MarkColonDown(Mark:down)
+#:&GitHub: https://github.com/Water-Run/MarkColonDown(Mark:down)
+
+#:: 一个两列三行的表格, 你也可以用`#:table`全称  
+#:-
+row1, row2
+1, 2
+3, 4
+#:=
 
 #:: ignore 将在编译时跳过整个文件
 #:ignore
@@ -209,9 +214,12 @@ count = 0
 #:- 关键字, 说明
 #:: for 循环, 遵循 lua 语法, 可以用 pairs 或者 ipairs
 #:: 打印 Mark:down 的关键字和说明列表
+#:-
+关键字, 说明
 #:for keyword, info in pairs(global.mark_colon_down_keyword)
-#:| keyword, info
-#:=
+{{ keyword }}, {{ info }}
+#:end
+#:end
 
 #:: 模板系统, 用于复用结构
 #:: 声明模板名(大驼峰): 参数名(小驼峰), 相当于 define 替换

@@ -1,34 +1,22 @@
-## 核心编译产物 (包含 AOT 生成的 exe 和 ELF 文件)
 [Bb]in/
 [Oo]bj/
-
-## Visual Studio 用户特定文件 (VS2022/VS2026)
 .vs/
 *.user
 *.userosscache
 *.sln.docstates
 *.suo
-
-## VS Code (如果你也用 VS Code 或 WSL 编辑)
 .vscode/
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
 *.code-workspace
-
-## .NET Core / Rider / 其他工具
 project.lock.json
 project.fragment.lock.json
 artifacts/
-
-## 操作系统生成的文件
-# Windows
 Thumbs.db
 ehthumbs.db
 Desktop.ini
-
-# Linux (WSL 开发时可能产生)
 .DS_Store
 .DS_Store?
 ._*
@@ -36,7 +24,5 @@ Desktop.ini
 .Trashes
 *~
 *.swp
-
-## 崩溃转储和日志
 *.log
 *.dmp
